@@ -1,6 +1,7 @@
-# Mindustry Java **MALWARE** Mod
-A Java Mindustry mod that works on PC as malware.
-This mod removes all you're data, game with nice effects
+# Mindustry Java **MALWARE (!!!)** Mod
+A Java Mindustry mod that works on PC as malware.<br>
+This mod removes all you're data, game with nice effects<br>
+**we do not bear any responsibility for the damage it may cause, we warned that it is a virus**
 
 ## Building for Desktop
 

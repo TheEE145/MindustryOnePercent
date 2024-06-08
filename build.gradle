@@ -47,54 +47,49 @@ configurations.all{
     }
 }
 
-task jarAndroid{
-    dependsOn "jar"
+jar {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    var prop = gradle.startParameter.projectProperties
+    String asString = null
 
-    doLast{
-        if(!sdkRoot || !new File(sdkRoot).exists()) throw new GradleException("No valid Android SDK found. Ensure that ANDROID_HOME is set to your Android SDK directory.");
-
-        def platformRoot = new File("$sdkRoot/platforms/").listFiles().sort().reverse().find{ f -> new File(f, "android.jar").exists()}
-
-        if(!platformRoot) throw new GradleException("No android.jar found. Ensure that you have an Android platform installed.")
-
-        //collect dependencies needed for desugaring
-        def dependencies = (configurations.compileClasspath.asList() + configurations.runtimeClasspath.asList() + [new File(platformRoot, "android.jar")]).collect{ "--classpath $it.path" }.join(" ")
-
-        def d8 = isWindows ? "d8.bat" : "d8"
-
-        //dex and desugar files - this requires d8 in your PATH
-        "$d8 $dependencies --min-api 14 --output ${project.archivesBaseName}Android.jar ${project.archivesBaseName}Desktop.jar"
-            .execute(null, new File("$buildDir/libs")).waitForProcessOutput(System.out, System.err)
-    }
-}
-
-jar{
-    archiveFileName = "${base.archivesBaseName}Desktop.jar"
-
-    from{
-        configurations.runtimeClasspath.collect{ it.isDirectory() ? it : zipTree(it) }
+    if(prop.containsKey('ex')) {
+        asString = "${archivesBaseName}Desktop.${prop.get('ex')}"
+    } else {
+        println('Using default file exception (jar)')
+        asString = "${archivesBaseName}Desktop.jar"
     }
 
-    from(projectDir){
-        include "mod.hjson"
+    archiveFileName = asString
+
+    from {
+        configurations.runtimeClasspath.collect {
+            it.isDirectory() ? it : zipTree(it)
+        }
     }
 
-    from("assets/"){
+    from("assets") {
         include "**"
     }
-}
 
-task deploy(type: Jar){
-    dependsOn jarAndroid
-    dependsOn jar
-    archiveFileName = "${base.archivesBaseName}.jar"
+    from(rootDir) {
+        include "mod.hjson"
+        include "icon.png"
+        include "scripts/**"
+    }
 
-    from{ [zipTree("$buildDir/libs/${project.archivesBaseName}Desktop.jar"), zipTree("$buildDir/libs/${project.archivesBaseName}Android.jar")] }
+    doLast {
+        if(prop.containsKey('path')) {
+            copy {
+                println("Copy file ${asString} to destonation")
+                from layout.buildDirectory.file("libs/$asString")
+                into layout.buildDirectory.dir(prop.get('path'))
+            }
+        }
 
-    doLast{
-        delete{
-            delete "$buildDir/libs/${project.archivesBaseName}Desktop.jar"
-            delete "$buildDir/libs/${project.archivesBaseName}Android.jar"
+        if(prop.containsKey('m')) {
+            exec {
+                commandLine 'cmd', '/c', "\"${prop.get('m')}\""
+            }
         }
     }
 }
